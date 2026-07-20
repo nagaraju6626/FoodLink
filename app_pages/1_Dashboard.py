@@ -8,6 +8,12 @@ st.set_page_config(layout="wide", page_title="Dashboard")
 
 st.markdown(get_custom_css(), unsafe_allow_html=True)
 
+# Handle "View all" navigation via session state
+if 'view_all_page' in st.session_state and st.session_state.view_all_page:
+    st.session_state['nav_clicked'] = st.session_state.view_all_page
+    st.session_state.view_all_page = None
+    st.rerun()
+
 # Restyle Streamlit's native bordered container to act as our "card"
 # (fixes the empty-white-box bug caused by splitting HTML across calls)
 st.markdown("""
@@ -240,7 +246,9 @@ with activity_col1:
         with h1:
             st.markdown('<div class="section-title" style="margin:0;">Recent food listings</div>', unsafe_allow_html=True)
         with h2:
-            st.markdown('<div style="text-align:right;"><a href="/Food_Listings" target="_self" class="link">View all</a></div>', unsafe_allow_html=True)
+            if st.button("View all", key="view_all_listings"):
+                st.session_state.view_all_page = "Food Listings"
+                st.rerun()
 
         if not recent_listings.empty:
             rows_html = ""
@@ -260,7 +268,9 @@ with activity_col2:
         with h1:
             st.markdown('<div class="section-title" style="margin:0;">Recent claims</div>', unsafe_allow_html=True)
         with h2:
-            st.markdown('<div style="text-align:right;"><a href="/My_Claims" target="_self" class="link">View all</a></div>', unsafe_allow_html=True)
+            if st.button("View all", key="view_all_claims"):
+                st.session_state.view_all_page = "Claims"
+                st.rerun()
 
         if not recent_claims.empty:
             rows_html = ""

@@ -36,15 +36,29 @@ if 'navigation' not in st.session_state:
 # Inject custom CSS
 st.markdown(get_custom_css(), unsafe_allow_html=True)
 
-# Determine current page from query params
-selected_page = st.query_params.get('page')
-if selected_page:
-    selected_page = selected_page.strip()
-    if selected_page in [
-        'Dashboard', 'Add Food Listing', 'Food Listings', 'My Listings', 'Claims',
-        'Providers', 'Receivers', 'Analytics', 'Reports', 'Profile Settings'
-    ]:
-        st.session_state['current_page'] = selected_page
+# Define page files before using them
+PAGE_FILES = {
+    'Dashboard': 'app_pages/1_Dashboard.py',
+    'Add Food Listing': 'app_pages/2_Add_Food_Listing.py',
+    'Food Listings': 'app_pages/3_Food_Listings.py',
+    'My Listings': 'app_pages/4_My_Listings.py',
+    'Claims': 'app_pages/5_Claims.py',
+    'Providers': 'app_pages/6_Providers.py',
+    'Receivers': 'app_pages/7_Receivers.py',
+    'Analytics': 'app_pages/8_Analytics.py',
+    'Reports': 'app_pages/9_Reports.py',
+    'Profile Settings': 'app_pages/10_Profile_Settings.py',
+}
+
+# Store navigation in session state
+if 'nav_clicked' not in st.session_state:
+    st.session_state['nav_clicked'] = None
+
+# Handle navigation from session state
+if st.session_state['nav_clicked'] in PAGE_FILES:
+    st.session_state['current_page'] = st.session_state['nav_clicked']
+    st.session_state['nav_clicked'] = None
+    st.rerun()
 
 # Sidebar navigation
 NAV_ITEMS = [
@@ -135,19 +149,6 @@ NAV_ITEMS = [
     ),
 ]
 
-PAGE_FILES = {
-    'Dashboard': 'pages/1_Dashboard.py',
-    'Add Food Listing': 'pages/2_Add_Food_Listing.py',
-    'Food Listings': 'pages/3_Food_Listings.py',
-    'My Listings': 'pages/4_My_Listings.py',
-    'Claims': 'pages/5_Claims.py',
-    'Providers': 'pages/6_Providers.py',
-    'Receivers': 'pages/7_Receivers.py',
-    'Analytics': 'pages/8_Analytics.py',
-    'Reports': 'pages/9_Reports.py',
-    'Profile Settings': 'pages/10_Profile_Settings.py',
-}
-
 with st.sidebar:
     # Logo and title
     st.markdown("""
@@ -168,20 +169,21 @@ with st.sidebar:
 
     st.markdown('<div class="sidebar-section-label">MANAGEMENT</div>', unsafe_allow_html=True)
 
-    for label, icon_html in NAV_ITEMS:
-        active_cls = 'active' if label == st.session_state['current_page'] else ''
-        href = f"?page={label.replace(' ', '%20')}"
-        st.markdown(
-            f"""
-            <a href="{href}" style="text-decoration:none;color:inherit; display:block;">
-                <div class="sidebar-nav-item {active_cls}">
-                    {icon_html}
-                    <span>{label}</span>
-                </div>
-            </a>
-            """,
-            unsafe_allow_html=True,
-        )
+    # Create a form for navigation (uses session state, no URL changes)
+    with st.form(key='nav_form', clear_on_submit=True):
+        for label, icon_html in NAV_ITEMS:
+            active_cls = 'active' if label == st.session_state['current_page'] else ''
+            # Use custom-styled button that looks like div
+            if st.form_submit_button(
+                label=f"  {label}",
+                help=label,
+                use_container_width=True
+            ):
+                st.session_state['nav_clicked'] = label
+                st.rerun()
+    
+    # Add hidden inputs to track current page for styling
+    st.session_state['current_page'] = st.session_state.get('current_page', 'Dashboard')
 
     st.markdown("""
     <div class="sidebar-bottom-card">

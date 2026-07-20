@@ -237,6 +237,78 @@ CUSTOM_CSS = """
     stroke: #FFFFFF !important;
 }
 
+/* Form button navigation - style buttons to look like nav items */
+[data-testid="stSidebar"] [data-testid="stFormSubmitButton"] {
+    background: transparent !important;
+    border: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    text-align: left !important;
+}
+
+[data-testid="stSidebar"] [data-testid="stFormSubmitButton"] button {
+    width: 100% !important;
+    background: transparent !important;
+    border: none !important;
+    padding: 0.85rem 1rem !important;
+    margin-bottom: 0.5rem !important;
+    border-radius: 14px !important;
+    border-left: 3px solid transparent !important;
+    text-align: left !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 0.85rem !important;
+    font-size: 13.5px !important;
+    font-weight: 500 !important;
+    color: #D1FAE5 !important;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+[data-testid="stSidebar"] [data-testid="stFormSubmitButton"] button:hover {
+    background: #DCFCE7 !important;
+    border-left: 3px solid #22C55E !important;
+    transform: scale(1.02) !important;
+    color: #166534 !important;
+}
+
+[data-testid="stSidebar"] [data-testid="stFormSubmitButton"] button:hover span {
+    color: #166534 !important;
+}
+
+[data-testid="stSidebar"] [data-testid="stFormSubmitButton"] button:active,
+[data-testid="stSidebar"] [data-testid="stFormSubmitButton"]:active button {
+    background: linear-gradient(135deg, #22C55E 0%, #16A34A 100%) !important;
+    border-left: 3px solid #22C55E !important;
+    color: #FFFFFF !important;
+    transform: scale(1.02) !important;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18) !important;
+}
+
+[data-testid="stSidebar"] [data-testid="stFormSubmitButton"] button svg,
+[data-testid="stSidebar"] [data-testid="stFormSubmitButton"] button span {
+    color: #A7F3D0 !important;
+    stroke: #A7F3D0 !important;
+}
+
+[data-testid="stSidebar"] [data-testid="stFormSubmitButton"] button:hover svg,
+[data-testid="stSidebar"] [data-testid="stFormSubmitButton"] button:hover span {
+    color: #16A34A !important;
+    stroke: #16A34A !important;
+}
+
+[data-testid="stSidebar"] [data-testid="stFormSubmitButton"]:active button svg,
+[data-testid="stSidebar"] [data-testid="stFormSubmitButton"]:active button span {
+    color: #FFFFFF !important;
+    stroke: #FFFFFF !important;
+}
+
+/* Remove form styling in sidebar */
+[data-testid="stSidebar"] [data-testid="stForm"] {
+    background: transparent !important;
+    border: none !important;
+    padding: 0 !important;
+}
+
 /* Sidebar Section Label */
 .sidebar-section-label {
     font-size: 10.5px;
