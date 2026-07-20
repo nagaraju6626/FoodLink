@@ -6,3 +6,4 @@ reportlab>=4.2.0
 mysql-connector-python
 plotly
 python-dotenv
+streamlit-option-menu
