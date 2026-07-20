@@ -1,12 +1,16 @@
 import streamlit as st
 import requests
 from datetime import datetime, date
-from db.database import create_food_listing, get_all_providers
+from db.database import create_food_listing, update_food_listing, get_all_providers, get_food_listing_by_id
 from utils.styles import get_custom_css
 
 st.set_page_config(layout="wide", page_title="Add Food Listing", initial_sidebar_state="expanded")
 
 st.markdown(get_custom_css(), unsafe_allow_html=True)
+
+# Check if we're in edit mode
+is_edit_mode = 'editing_listing_id' in st.session_state and st.session_state.editing_listing_id is not None
+editing_data = st.session_state.get('editing_listing_data', None)
 
 # =========================================================
 #  GLOBAL THEME / SHELL CSS  (sidebar, header, cards, etc.)
@@ -191,10 +195,17 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ---------------- Header ----------------
-st.markdown("""
+if is_edit_mode:
+    header_title = "Edit Food Listing"
+    header_subtitle = "Update your food listing details."
+else:
+    header_title = "Add Food Listing"
+    header_subtitle = "Share food with those who need it."
+
+st.markdown(f"""
 <div class="animate-fade-in">
-    <h1 class="header-title">Add Food Listing</h1>
-    <p class="header-subtitle">Share food with those who need it.</p>
+    <h1 class="header-title">{header_title}</h1>
+    <p class="header-subtitle">{header_subtitle}</p>
 </div>
 """, unsafe_allow_html=True)
 
@@ -233,9 +244,14 @@ with left_col:
     with st.container(border=True):
         st.markdown('<div class="section-title" style="margin-bottom:0.75rem;">Basic Information</div>', unsafe_allow_html=True)
 
+        # Get default values for edit mode
+        default_food_name = editing_data.get('food_name', '') if editing_data else ''
+        default_food_type = editing_data.get('food_type', 'Select Category') if editing_data else 'Select Category'
+        default_meal_type = editing_data.get('meal_type', 'Select Meal Type') if editing_data else 'Select Meal Type'
+
         r1c1, r1c2 = st.columns(2)
         with r1c1:
-            food_name = st.text_input("Food Title *", placeholder="e.g., Vegetable Biryani", key="food_name")
+            food_name = st.text_input("Food Title *", value=default_food_name, placeholder="e.g., Vegetable Biryani", key="food_name")
         with r1c2:
             food_type = st.selectbox("Food Category *", ["Select Category", "Cooked Food", "Fruits", "Vegetables", "Bakery", "Others"], key="food_type")
 
@@ -323,10 +339,23 @@ with left_col:
     st.markdown("<div style='height: 1rem'></div>", unsafe_allow_html=True)
 
     btn_col1, btn_col2, btn_col3 = st.columns([3, 1, 1])
+    
+    # Handle cancel button in edit mode
+    if is_edit_mode:
+        with btn_col1:
+            cancel = st.button("Cancel", use_container_width=True, key="cancel_btn")
+            if cancel:
+                st.session_state.pop('editing_listing_id', None)
+                st.session_state.pop('editing_listing_data', None)
+                st.rerun()
+    
     with btn_col2:
         reset = st.button("Reset", use_container_width=True, key="reset_btn")
     with btn_col3:
-        submit = st.button("Submit Listing", use_container_width=True, type="primary", key="submit_btn")
+        if is_edit_mode:
+            submit = st.button("Update Listing", use_container_width=True, type="primary", key="submit_btn")
+        else:
+            submit = st.button("Submit Listing", use_container_width=True, type="primary", key="submit_btn")
 
     # ---- Handle reset ----
     if reset:
@@ -345,21 +374,40 @@ with left_col:
                 if uploaded_image is not None:
                     image_url = uploaded_image.name  # replace with real save/upload logic as needed
 
-                food_id = create_food_listing(
-                    food_name=food_name,
-                    food_type=food_type,
-                    meal_type=meal_type,
-                    quantity=quantity,
-                    unit=unit,
-                    provider_id=provider_id,
-                    location=location,
-                    expiry_time=expiry_datetime.strftime('%Y-%m-%d %H:%M:%S'),
-                    image_url=image_url
-                )
-                st.success(f"✓ Food listing added successfully! (ID: {food_id})")
-                st.balloons()
+                if is_edit_mode:
+                    # Update existing listing
+                    update_food_listing(
+                        food_id=st.session_state.editing_listing_id,
+                        food_name=food_name,
+                        food_type=food_type,
+                        meal_type=meal_type,
+                        quantity=quantity,
+                        unit=unit,
+                        location=location,
+                        expiry_time=expiry_datetime.strftime('%Y-%m-%d %H:%M:%S'),
+                        image_url=image_url
+                    )
+                    st.success(f"✓ Food listing updated successfully! (ID: {st.session_state.editing_listing_id})")
+                    st.session_state.pop('editing_listing_id', None)
+                    st.session_state.pop('editing_listing_data', None)
+                else:
+                    # Create new listing
+                    food_id = create_food_listing(
+                        food_name=food_name,
+                        food_type=food_type,
+                        meal_type=meal_type,
+                        quantity=quantity,
+                        unit=unit,
+                        provider_id=provider_id,
+                        location=location,
+                        expiry_time=expiry_datetime.strftime('%Y-%m-%d %H:%M:%S'),
+                        image_url=image_url
+                    )
+                    st.success(f"✓ Food listing added successfully! (ID: {food_id})")
+                    st.balloons()
+                st.cache_data.clear()
             except Exception as e:
-                st.error(f"Error adding food listing: {str(e)}")
+                st.error(f"Error saving food listing: {str(e)}")
         else:
             st.warning("Please fill in all required fields.")
 

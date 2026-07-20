@@ -320,6 +320,25 @@ def verify_provider(provider_id: int):
     conn.commit()
     conn.close()
 
+def get_providers_with_stats():
+    """Get all providers with computed columns for UI display."""
+    conn = get_connection()
+    query = '''
+        SELECT 
+            p.id, p.name, p.type, p.address, p.city, p.contact, p.verified,
+            p.address as area,
+            COALESCE(p.contact, '') as phone,
+            COALESCE(p.contact, '') as email,
+            COALESCE((SELECT COUNT(*) FROM food_listings WHERE provider_id = p.id), 0) as total_listings,
+            COALESCE((SELECT COUNT(*) FROM food_listings WHERE provider_id = p.id AND status = 'Claimed'), 0) as total_donations,
+            COALESCE((SELECT DATE(MAX(created_at)) FROM food_listings WHERE provider_id = p.id), '—') as joined_on
+        FROM providers p
+        ORDER BY p.name
+    '''
+    df = pd.read_sql_query(query, conn)
+    conn.close()
+    return df
+
 # ============== RECEIVER CRUD ==============
 
 def create_receiver(name: str, type: str, city: str, contact: str) -> int:
@@ -522,12 +541,37 @@ def get_claim_by_id(claim_id: int):
     return dict(df.iloc[0]) if not df.empty else None
 
 def update_claim_status(claim_id: int, status: str):
-    """Update claim status."""
+    """Update claim status and cascade to food listing if needed."""
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute("UPDATE claims SET status = ? WHERE id = ?", (status, claim_id))
+    
+    # Get the claim details first
+    cursor.execute("SELECT food_id FROM claims WHERE id = ?", (claim_id,))
+    result = cursor.fetchone()
+    if result:
+        food_id = result[0]
+        
+        # Update claim status
+        cursor.execute("UPDATE claims SET status = ? WHERE id = ?", (status, claim_id))
+        
+        # If approved or completed, update food listing status to Claimed
+        if status in ['Approved', 'Completed']:
+            cursor.execute("UPDATE food_listings SET status = 'Claimed' WHERE id = ?", (food_id,))
+    
     conn.commit()
     conn.close()
+
+def approve_claim(claim_id: int):
+    """Approve a claim and update food listing status."""
+    return update_claim_status(claim_id, 'Approved')
+
+def reject_claim(claim_id: int):
+    """Reject a claim."""
+    return update_claim_status(claim_id, 'Rejected')
+
+def complete_claim(claim_id: int):
+    """Complete a claim."""
+    return update_claim_status(claim_id, 'Completed')
 
 def delete_claim(claim_id: int):
     """Delete claim."""

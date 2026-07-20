@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-from db.database import get_all_providers
+from db.database import get_providers_with_stats, create_provider, update_provider, delete_provider, verify_provider
 from utils.styles import get_custom_css
 
 st.set_page_config(layout="wide", page_title="Providers", initial_sidebar_state="expanded")
@@ -316,34 +316,20 @@ st.markdown("<div style='height:0.75rem'></div>", unsafe_allow_html=True)
 
 # =========================================================
 #  DATA
-#  Replace this block with real data from get_all_providers().
-#  Expected columns: name, email, phone, area, city, type, status,
-#  total_listings, total_donations, joined_on
 # =========================================================
+@st.cache_data(ttl=60)
+def load_providers():
+    return get_providers_with_stats()
+
 try:
-    providers_df = get_all_providers()
+    providers_df = load_providers()
     if providers_df is None or len(providers_df) == 0:
         raise ValueError("empty")
 except Exception:
     providers_df = pd.DataFrame([
-        {"name": "Foodies Restaurant", "email": "foodies@example.com", "phone": "+91 98765 43210",
-         "area": "Banjara Hills", "city": "Hyderabad", "type": "Restaurant", "status": "Active",
-         "total_listings": 18, "total_donations": 85, "joined_on": "May 10, 2025"},
-        {"name": "Green Valley Bakery", "email": "contact@greenvalley.com", "phone": "+91 91234 56789",
-         "area": "Jubilee Hills", "city": "Hyderabad", "type": "Bakery", "status": "Active",
-         "total_listings": 12, "total_donations": 40, "joined_on": "Apr 28, 2025"},
-        {"name": "Spice Route Caterers", "email": "info@spiceroute.com", "phone": "+91 99876 54321",
-         "area": "Madhapur", "city": "Hyderabad", "type": "Caterer", "status": "Active",
-         "total_listings": 24, "total_donations": 112, "joined_on": "Apr 15, 2025"},
-        {"name": "Fresh Mart Supermarket", "email": "hello@freshmart.com", "phone": "+91 90123 45678",
-         "area": "Kukatpally", "city": "Hyderabad", "type": "Supermarket", "status": "Inactive",
-         "total_listings": 10, "total_donations": 30, "joined_on": "Mar 30, 2025"},
-        {"name": "Hotel Grand Inn", "email": "manager@grandinn.com", "phone": "+91 93456 78901",
-         "area": "Gachibowli", "city": "Hyderabad", "type": "Hotel", "status": "Active",
-         "total_listings": 8, "total_donations": 25, "joined_on": "Mar 18, 2025"},
-        {"name": "Sweet Delights", "email": "hello@sweetdelights.com", "phone": "+91 99099 11223",
-         "area": "Ameerpet", "city": "Hyderabad", "type": "Sweet Shop", "status": "Inactive",
-         "total_listings": 6, "total_donations": 14, "joined_on": "Feb 20, 2025"},
+        {"name": "No Providers", "email": "—", "phone": "—",
+         "area": "—", "city": "—", "type": "—", "status": "Active",
+         "total_listings": 0, "total_donations": 0, "joined_on": "—"},
     ])
 
 TYPE_CLASS = {
@@ -495,9 +481,12 @@ with st.container(border=True):
         types = ["All Types"] + sorted(providers_df["type"].unique().tolist())
         type_filter = st.selectbox("Type", types, label_visibility="collapsed", key="type_filter")
     with f5:
-        st.button("▽ Filter", use_container_width=True, key="filter_btn")
+        if st.button("▽ Filter", use_container_width=True, key="filter_btn"):
+            st.rerun()
     with f6:
-        st.button("↻ Refresh", use_container_width=True, key="refresh_btn")
+        if st.button("↻ Refresh", use_container_width=True, key="refresh_btn"):
+            load_providers.clear()
+            st.rerun()
 
 # ---- Apply filters ----
 filtered = providers_df.copy()
@@ -561,9 +550,7 @@ for i, row in filtered.reset_index(drop=True).iterrows():
         <td>{row['joined_on']}</td>
         <td>
             <div class="action-icons">
-                <div class="action-icon">👁</div>
-                <div class="action-icon">✏️</div>
-                <div class="action-icon danger">🗑</div>
+                <div class="action-icon" title="ID: {row['id']}">#{row['id']}</div>
             </div>
         </td>
     </tr>
@@ -594,6 +581,50 @@ table_html = f"""
 </div>
 """
 render_html(table_html)
+
+# =========================================================
+#  ACTION BUTTONS
+# =========================================================
+st.markdown("<div style='height:0.75rem'></div>", unsafe_allow_html=True)
+
+if not filtered.empty:
+    st.markdown('<div class="section-title">Manage Providers</div>', unsafe_allow_html=True)
+    
+    # Show action buttons for each provider
+    for idx, row in filtered.iterrows():
+        provider_id = row['id']
+        with st.container(border=True):
+            ac1, ac2, ac3, ac4, ac5 = st.columns([3, 1, 1, 1, 1])
+            with ac1:
+                st.markdown(f"**{row['name']}** <span style='color:#6B7280; font-size:12px;'>(ID: {provider_id})</span>", unsafe_allow_html=True)
+            with ac2:
+                if row['verified'] == 0 or row['status'] == 'Inactive':
+                    if st.button("✓ Verify", key=f"verify_{provider_id}", help="Verify provider"):
+                        try:
+                            verify_provider(provider_id)
+                            load_providers.clear()
+                            st.success(f"Provider '{row['name']}' verified!")
+                            st.rerun()
+                        except Exception as e:
+                            st.error(f"Error: {str(e)}")
+                else:
+                    st.button("✓ Verified", key=f"verified_{provider_id}", disabled=True, use_container_width=True)
+            with ac3:
+                if st.button("Edit", key=f"edit_{provider_id}", use_container_width=True):
+                    st.session_state['editing_provider_id'] = provider_id
+                    st.rerun()
+            with ac4:
+                if st.button("🗑 Delete", key=f"delete_{provider_id}", use_container_width=True):
+                    try:
+                        delete_provider(provider_id)
+                        load_providers.clear()
+                        st.success(f"Provider '{row['name']}' deleted!")
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"Error: {str(e)}")
+            with ac5:
+                st.markdown(f"<div style='text-align:center; padding-top:8px;'><span class='tag-pill-sm' style='background:#E9F3EC; color:#1B4D3E;'>{row['type']}</span></div>", unsafe_allow_html=True)
+    st.markdown("<div style='height:0.5rem'></div>", unsafe_allow_html=True)
 
 # =========================================================
 #  PAGINATION (visual — wire up to real paging as needed)

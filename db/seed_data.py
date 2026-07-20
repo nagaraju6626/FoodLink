@@ -3,8 +3,79 @@ import random
 from datetime import datetime, timedelta
 import os
 
-# Import database functions
-from database import init_database, get_connection
+# Database path
+DB_PATH = os.path.join(os.path.dirname(__file__), 'food_wastage.db')
+
+def get_connection():
+    """Create and return a database connection."""
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    return conn
+
+def init_database():
+    """Initialize the database with all required tables."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    # Create providers table
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS providers (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT,
+            type TEXT,
+            address TEXT,
+            city TEXT,
+            contact TEXT,
+            verified INTEGER DEFAULT 0
+        )
+    ''')
+    
+    # Create receivers table
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS receivers (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT,
+            type TEXT,
+            city TEXT,
+            contact TEXT
+        )
+    ''')
+    
+    # Create food_listings table
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS food_listings (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            food_name TEXT,
+            food_type TEXT,
+            meal_type TEXT,
+            quantity REAL,
+            unit TEXT,
+            provider_id INTEGER,
+            location TEXT,
+            expiry_time DATETIME,
+            image_url TEXT,
+            status TEXT DEFAULT 'Available',
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (provider_id) REFERENCES providers(id)
+        )
+    ''')
+    
+    # Create claims table
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS claims (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            food_id INTEGER,
+            receiver_id INTEGER,
+            quantity_claimed REAL,
+            status TEXT DEFAULT 'Pending',
+            claimed_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (food_id) REFERENCES food_listings(id),
+            FOREIGN KEY (receiver_id) REFERENCES receivers(id)
+        )
+    ''')
+    
+    conn.commit()
+    conn.close()
 
 # Sample data
 PROVIDER_NAMES = [

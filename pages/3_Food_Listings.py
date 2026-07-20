@@ -247,8 +247,6 @@ if not page_data.empty:
 
                     bcol1, bcol2 = st.columns(2, gap="small")
                     with bcol1:
-                        view_clicked = st.button("View Details", key=f"view_{item['id']}", use_container_width=True)
-                    with bcol2:
                         claim_disabled = status != "Available"
                         claim_clicked = st.button(
                             "Claim Food" if not claim_disabled else "Claimed",
@@ -258,9 +256,8 @@ if not page_data.empty:
                             disabled=claim_disabled,
                         )
 
-                    if view_clicked:
-                        st.session_state.selected_listing_id = item['id']
-                        st.switch_page("pages/3_Food_Listing_Detail.py")
+                    with bcol2:
+                        st.markdown('<div style="display:flex; align-items:center; justify-content:center; height:38px; background:#F3F4F6; border-radius:6px; font-size:12px; color:#6B7280;">' + f"ID: {item['id']}" + '</div>', unsafe_allow_html=True)
 
                     if claim_clicked and not claim_disabled:
                         try:

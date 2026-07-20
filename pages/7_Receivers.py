@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-from db.database import get_all_receivers
+from db.database import get_all_receivers, create_receiver, update_receiver, delete_receiver
 from utils.helpers import get_initials, get_avatar_color
 from utils.styles import get_custom_css
 
@@ -203,15 +203,7 @@ st.markdown("<br>", unsafe_allow_html=True)
 left, right = st.columns([6, 1])
 
 with left:
-    render_html(f"""
-    <div style="
-    font-size:15px;
-    color:#6B7280;
-    font-weight:600;
-    margin-top:8px;">
-    Showing <b>{len(filtered_receivers)}</b> of <b>{len(all_receivers)}</b> receivers
-    </div>
-    """)
+    st.markdown(f"<div style='font-size:15px; color:#6B7280; font-weight:600; margin-top:8px;'>Showing <b>{len(filtered_receivers)}</b> of <b>{len(all_receivers)}</b> receivers</div>", unsafe_allow_html=True)
 
 with right:
     st.download_button(
@@ -230,62 +222,27 @@ if not filtered_receivers.empty:
         name = row["name"] if pd.notna(row["name"]) else "Unnamed Receiver"
         initials = get_initials(name)
         avatar_color = get_avatar_color(name)
-
-        render_html(f"""
-        <div style="
-            background:white;
-            border:1px solid #E5E7EB;
-            border-radius:18px;
-            padding:22px;
-            margin-bottom:18px;
-            box-shadow:0 4px 18px rgba(0,0,0,.05);
-            transition:.3s;">
-
-        <div style="display:flex;align-items:center;justify-content:space-between;">
-
-            <div style="display:flex;align-items:center;gap:18px;">
-
-                <div class="avatar {avatar_color}"
-                     style="width:70px;height:70px;font-size:24px;">
-                     {initials}
+        receiver_id = row["id"]
+        
+        # Use Streamlit container for better interactivity
+        with st.container(border=True):
+            col1, col2, col3 = st.columns([4, 1, 1])
+            
+            with col1:
+                render_html(f"""
+                <div style="display:flex;align-items:center;gap:18px;">
+                    <div class="avatar {avatar_color}" style="width:60px;height:60px;font-size:20px;">{initials}</div>
+                    <div>
+                        <div style="font-size:18px;font-weight:700;color:#111827;">{name}</div>
+                        <div style="color:#6B7280;font-size:14px;margin-top:4px;">🏢 {row['type']}</div>
+                        <div style="color:#6B7280;font-size:13px;margin-top:4px;">📍 {row['city']}</div>
+                        <div style="color:#6B7280;font-size:13px;margin-top:4px;">📞 {row['contact']}</div>
+                    </div>
                 </div>
-
-                <div>
-
-                    <div style="
-                        font-size:20px;
-                        font-weight:700;
-                        color:#111827;">
-                        {name}
-                    </div>
-
-                    <div style="
-                        color:#6B7280;
-                        font-size:15px;
-                        margin-top:4px;">
-                        🏢 {row['type']}
-                    </div>
-
-                    <div style="
-                        color:#6B7280;
-                        font-size:14px;
-                        margin-top:6px;">
-                        📍 {row['city']}
-                    </div>
-
-                    <div style="
-                        color:#6B7280;
-                        font-size:14px;
-                        margin-top:4px;">
-                        📞 {row['contact']}
-                    </div>
-
-                </div>
-
-            </div>
-
-            <div style="text-align:right;">
-
+                """)
+            
+            with col2:
+                st.markdown("""
                 <div style="
                     display:inline-block;
                     background:#DCFCE7;
@@ -293,31 +250,31 @@ if not filtered_receivers.empty:
                     padding:6px 14px;
                     border-radius:20px;
                     font-size:13px;
-                    font-weight:600;">
+                    font-weight:600;
+                    margin-top:8px;">
                     Active
                 </div>
-
-                <div style="height:18px;"></div>
-
-                <button style="
-                    background:#16A34A;
-                    color:white;
-                    border:none;
-                    border-radius:10px;
-                    padding:10px 24px;
-                    font-size:14px;
-                    font-weight:600;
-                    cursor:pointer;">
-                    View Details
-                </button>
-
-            </div>
-
-        </div>
-
-        </div>
-        """)
-
+                """, unsafe_allow_html=True)
+                
+                st.markdown(f"<div style='color:#9CA3AF;font-size:12px;margin-top:4px;'>ID: {receiver_id}</div>", unsafe_allow_html=True)
+            
+            with col3:
+                if st.button("View Details", key=f"view_receiver_{receiver_id}", use_container_width=True):
+                    st.session_state['selected_receiver_id'] = receiver_id
+                    st.rerun()
+                
+                if st.button("Edit", key=f"edit_receiver_{receiver_id}", use_container_width=True):
+                    st.session_state['editing_receiver_id'] = receiver_id
+                    st.rerun()
+                
+                if st.button("Delete", key=f"delete_receiver_{receiver_id}", use_container_width=True):
+                    try:
+                        delete_receiver(receiver_id)
+                        load_receivers.clear()
+                        st.success(f"Receiver '{name}' deleted!")
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"Error: {str(e)}")
 else:
     render_html("""
     <div style="

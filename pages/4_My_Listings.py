@@ -263,7 +263,7 @@ with st.container(border=True):
                 act1, act2, act3 = st.columns(3, gap="small")
                 with act1:
                     st.markdown('<div class="action-btn">', unsafe_allow_html=True)
-                    view_clicked = st.button("👁", key=f"view_{row['id']}", help="View details")
+                    st.markdown('<div style="display:flex; align-items:center; justify-content:center; height:32px; font-size:12px; color:#6B7280;">' + f"#{row['id']}" + '</div>', unsafe_allow_html=True)
                     st.markdown('</div>', unsafe_allow_html=True)
                 with act2:
                     st.markdown('<div class="action-btn">', unsafe_allow_html=True)
@@ -274,13 +274,20 @@ with st.container(border=True):
                     delete_clicked = st.button("🗑", key=f"delete_{row['id']}", help="Delete listing")
                     st.markdown('</div>', unsafe_allow_html=True)
 
-                if view_clicked:
-                    st.session_state.selected_listing_id = row['id']
-                    st.switch_page("pages/3_Food_Listing_Detail.py")
-
                 if edit_clicked:
                     st.session_state.editing_listing_id = row['id']
-                    st.switch_page("pages/2_Add_Food_Listing.py")
+                    st.session_state.editing_listing_data = {
+                        'food_name': row['food_name'],
+                        'food_type': row['food_type'],
+                        'meal_type': row['meal_type'],
+                        'quantity': row['quantity'],
+                        'unit': row['unit'],
+                        'location': row['location'],
+                        'expiry_time': row['expiry_time'],
+                        'image_url': row.get('image_url'),
+                        'status': row['status']
+                    }
+                    st.rerun()
 
                 if delete_clicked:
                     try:

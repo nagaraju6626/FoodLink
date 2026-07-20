@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-from db.database import get_all_claims, update_claim_status
+from db.database import get_all_claims, update_claim_status, approve_claim, reject_claim, complete_claim
 from utils.helpers import time_ago, get_status_badge_class, format_quantity, get_initials, get_avatar_color
 from utils.styles import get_custom_css
 
@@ -26,8 +26,55 @@ with st.spinner("Loading claims..."):
 if status_filter != "All":
     all_claims = all_claims[all_claims['status'] == status_filter]
 
+# Handle claim actions
+action_performed = None
+action_claim_id = None
+
+# Check for button clicks using session state
+for idx, row in all_claims.iterrows():
+    claim_id = row['id']
+    
+    col1, col2, col3 = st.columns([1, 1, 2])
+    
+    with col1:
+        if row['status'] == 'Pending':
+            if st.button("Approve", key=f"approve_{claim_id}", use_container_width=True):
+                try:
+                    approve_claim(claim_id)
+                    st.cache_data.clear()
+                    st.success(f"Claim approved for {row['receiver_name']}")
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Error: {str(e)}")
+        elif row['status'] == 'Approved':
+            st.button("✓ Approved", key=f"approved_{claim_id}", use_container_width=True, disabled=True)
+    
+    with col2:
+        if row['status'] in ['Pending', 'Approved']:
+            if st.button("Reject", key=f"reject_{claim_id}", use_container_width=True):
+                try:
+                    reject_claim(claim_id)
+                    st.cache_data.clear()
+                    st.warning(f"Claim rejected for {row['receiver_name']}")
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Error: {str(e)}")
+        elif row['status'] == 'Rejected':
+            st.button("✗ Rejected", key=f"rejected_{claim_id}", use_container_width=True, disabled=True)
+    
+    with col3:
+        if row['status'] == 'Approved':
+            if st.button("Mark Complete", key=f"complete_{claim_id}", use_container_width=True, type="primary"):
+                try:
+                    complete_claim(claim_id)
+                    st.cache_data.clear()
+                    st.success(f"Claim marked as complete for {row['receiver_name']}")
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Error: {str(e)}")
+
 # Display count
-st.markdown(f"<div style='color: #6B7280; font-size: 0.9375rem; margin-bottom: 1.5rem; font-weight: 500;'>Showing {len(all_claims)} claims</div>", unsafe_allow_html=True)
+st.markdown(f"<div style='color: #6B7280; font-size: 0.9375rem; margin-bottom: 1.5rem; font-weight: 500; margin-top: 1rem;'>Showing {len(all_claims)} claims</div>", unsafe_allow_html=True)
 
 st.markdown("<div style='height: 1rem;'></div>", unsafe_allow_html=True)
 
@@ -51,11 +98,6 @@ if not all_claims.empty:
                     </div>
                     <div style="font-size: 0.75rem; color: #9CA3AF;">{time_ago(row['claimed_at'])}</div>
                 </div>
-            </div>
-            <div style="margin-top: 1.25rem; padding-top: 1.25rem; border-top: 1px solid #E5E7EB; display: flex; gap: 0.75rem;">
-                <button class="btn-primary" style="padding: 0.625rem 1.25rem; font-size: 0.875rem; font-weight: 600; border-radius: 12px;">Approve</button>
-                <button class="btn-danger" style="padding: 0.625rem 1.25rem; font-size: 0.875rem; font-weight: 600; border-radius: 12px;">Reject</button>
-                <button class="btn-secondary" style="padding: 0.625rem 1.25rem; font-size: 0.875rem; font-weight: 600; border-radius: 12px; margin-left: auto;">View Details</button>
             </div>
         </div>
         """, unsafe_allow_html=True)
