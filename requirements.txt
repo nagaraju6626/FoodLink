@@ -7,3 +7,4 @@ mysql-connector-python
 plotly
 python-dotenv
 streamlit-option-menu
+pytz
